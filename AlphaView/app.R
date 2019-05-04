@@ -51,8 +51,8 @@ ui <- dashboardPage(
           ),
           # sidebar panel
           sidebarPanel(
-            tags$style(type="text/css", "input.form-control { font-size:30px; height:50px;}"),
-            tags$style(type="text/css", "input.shiny-bound-input { font-size:35px; height:50px;}"),
+            tags$style(type="text/css", "input.form-control { font-size:20px; height:50px;}"),
+            tags$style(type="text/css", "input.shiny-bound-input { font-size:20px; height:50px;}"),
             # width 
             width = 3,
             # symbol input
@@ -61,7 +61,7 @@ ui <- dashboardPage(
             dateRangeInput("dates", 
                            "Date range",
                            start = "2019-01-01", 
-                           end = as.character(Sys.Date()))
+                           end = "2019-01-29")
           )
         )
       ),
@@ -104,7 +104,7 @@ server <- function(input, output) {
     
     chartSeries(Data, type = "candlesticks", 
                 theme = chartTheme("white"), up.col = "green", dn.col = "red")
-  }, height = 940)
+  }, height = 550)
   
   
 }
