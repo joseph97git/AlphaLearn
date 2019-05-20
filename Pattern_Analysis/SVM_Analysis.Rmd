@@ -21,7 +21,7 @@ library(TTR)
 ## Data
 
 ```{r}
-getSymbols("AAPL", src = "yahoo", from = as.Date('2018-05-18'), to = as.Date('2019-05-18'))
+getSymbols("AAPL", src = "yahoo", from = as.Date('2012-05-18'), to = as.Date('2019-05-18'))
 ```
 
 ## Indicators 
@@ -106,7 +106,7 @@ pnDX_roc_moment <- merge(pnDX_raw_aapl, roc_aapl$AAPL.Close, moment_aapl$AAPL.Cl
 
 ```{r}
 # plot equilibrium pts
-chartSeries(x = AAPL, subset = '2018-05-18::2019-05-18', type = "candlesticks", theme = chartTheme("white"), up.col = "green", dn.col = "red") 
+chartSeries(x = AAPL, subset = '2012-05-18::2019-05-18', type = "candlesticks", theme = chartTheme("white"), up.col = "green", dn.col = "red") 
 addADX(n = 10)
 addSMA(n = 10)
 x_vline <- xts(rep(TRUE, length(equil_dates)), equil_dates)
@@ -117,6 +117,8 @@ addTA(x_vline, on = -1, col = "lightblue", border='blue')
 
 ```{r}
 library(e1071)
+library(ggplot2)
+library(caret)
 ```
 
 
@@ -136,5 +138,39 @@ dates_signal_sub <- dates_signal[index(predictors_sub)]
 
 # combine predictors and response
 data_dx_roc <- merge(predictors_sub, dates_signal_sub)
+
+# split into training and test sets
+smp_size <- floor(0.75*(data_dx_roc))
+set.seed(13)
+train_idx <- sample(seq_len(nrow(data_dx_roc)), size = smp_size)
+train <- data_dx_roc[-train_idx,]
+test <- data_dx_roc[train_idx,]
+names <- c("DIp", "DIn", "DX", "AAPLClose", "AAPLClose1", "signal")
+colnames(train) <- names
+colnames(test) <- names
 ```
+
+```{r}
+ggplot(data=train, aes(DX, AAPLClose, col = signal)) + geom_point()
+```
+
+```{r}
+# fit radial svm model
+svm_fit <- svm(factor(signal) ~ DX + AAPLClose, data = train, kernel = "linear", degree = 3)
+```
+
+```{r}
+# predict on test data
+pred <- predict(svm_fit, test)
+
+# check accuracy
+test_signal <- data.frame("signal" = factor(test$signal))
+rownames(test_signal) <- 1:nrow(test_signal)
+confusionMatrix(pred, test_signal$signal)
+```
+
+```{r}
+plot(svm_fit, data=train, formula = AAPLClose ~ DX, fill=TRUE, color.palette = cm.colors)
+```
+
 
