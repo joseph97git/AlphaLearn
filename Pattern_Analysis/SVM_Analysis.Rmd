@@ -1,0 +1,140 @@
+---
+title: "SVM Analysis"
+author: "Joseph Kim"
+date: "5/15/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages
+
+```{r}
+# import packages
+library(quantmod)
+library(plyr)
+library(TTR)
+```
+
+## Data
+
+```{r}
+getSymbols("AAPL", src = "yahoo", from = as.Date('2018-05-18'), to = as.Date('2019-05-18'))
+```
+
+## Indicators 
+
+```{r}
+# calculates derivative of closing prices
+# applies specifically to moving averages
+discreteDeriv <- function(data, shift) {
+  discrete <- rep(NA, shift)
+  for (i in 1:length(data)-1) {
+    discrete <- append(discrete, data[i+1]-data[i])
+  }
+  return(discrete)
+}
+```
+
+```{r}
+# get sma data
+close_aapl <- data.frame(AAPL$AAPL.Close)
+sma_aapl <- SMA(close_aapl, n = 3)
+sma_raw_aapl <- sma_aapl[complete.cases(sma_aapl),]
+```
+
+```{r}
+# calculate derivative of sma, 10 day average
+sma_deriv_aapl <- discreteDeriv(sma_raw_aapl, 3)
+sma_deriv_raw_aapl <- sma_deriv_aapl[complete.cases(sma_deriv_aapl)]
+```
+
+```{r}
+# calculate 2nd derivate of sma
+sma_2deriv_aapl <- discreteDeriv(sma_deriv_raw_aapl, 4)
+```
+
+```{r}
+# store sma and derivative of sma
+sma_func <- data.frame(cbind(sma_aapl, sma_deriv_aapl, sma_2deriv_aapl))
+```
+
+```{r}
+# convert derivatve to binary
+bin_deriv <- sma_func$sma_deriv_aapl
+bin_deriv[bin_deriv > 0] <- 1
+bin_deriv[bin_deriv <= 0] <- 0
+
+# convert 2nd derivate to binary
+bin_2deriv <- sma_func$sma_2deriv_aapl
+bin_2deriv[bin_2deriv > 0] <- 1
+bin_2deriv[bin_2deriv <= 0] <- 0
+
+# find equilibrium points
+equil_pts <- c(which(diff(bin_deriv)!=0))
+equil_pts_deriv_shift <- equil_pts + 1
+equil_dates <- as.Date(row.names(close_aapl)[equil_pts])
+
+# categorize buy, sell signal at equilibrium dates
+equil_dates_2deriv <- bin_2deriv[equil_pts_deriv_shift]
+equil_signal <- ifelse(equil_dates_2deriv == 1, "buy", "sell")
+```
+
+```{r}
+# ADX data
+close_aapl <- data.frame(AAPL$AAPL.Close)
+adx_aapl <- ADX(AAPL, n = 10)
+adx_raw_aapl <- adx_aapl[complete.cases(adx_aapl),] 
+
+# ADX pos, neg, direction
+pnDX <- adx_aapl[,1:3]
+pnDX_raw_aapl <- pnDX[complete.cases(pnDX),]
+
+# ROC data
+roc_aapl <- ROC(AAPL, n = 10, na.pad = FALSE)
+
+# momentum data
+moment_aapl <- momentum(AAPL, n = 10, na.pad = FALSE)
+
+# combine ADX subset, roc, momentum
+pnDX_roc_moment <- merge(pnDX_raw_aapl, roc_aapl$AAPL.Close, moment_aapl$AAPL.Close)
+```
+
+## Plot
+
+```{r}
+# plot equilibrium pts
+chartSeries(x = AAPL, subset = '2018-05-18::2019-05-18', type = "candlesticks", theme = chartTheme("white"), up.col = "green", dn.col = "red") 
+addADX(n = 10)
+addSMA(n = 10)
+x_vline <- xts(rep(TRUE, length(equil_dates)), equil_dates)
+addTA(x_vline, on = -1, col = "lightblue", border='blue')
+```
+
+## SVM Analysis
+
+```{r}
+library(e1071)
+```
+
+
+```{r}
+# svm data preprocessing
+
+# combine and convert to xts
+dates_signal <- data.frame("signal" = equil_dates_2deriv)
+rownames(dates_signal) <- equil_dates
+dates_signal <- xts(dates_signal, order.by = as.Date(rownames(dates_signal), "%Y-%m-%d"))
+
+# subset indicators by equilibrium dates
+predictors_sub <- pnDX_roc_moment[equil_dates,]
+
+# subset signal 
+dates_signal_sub <- dates_signal[index(predictors_sub)]
+
+# combine predictors and response
+data_dx_roc <- merge(predictors_sub, dates_signal_sub)
+```
+
