@@ -1,4 +1,3 @@
-
 # This is the server logic for a Shiny web application.
 # You can find out more about building applications with Shiny here:
 #
@@ -8,6 +7,10 @@
 library(shiny)
 library(shinydashboard)
 library(quantmod)
+library(TTR)
+
+# source functions
+source("Basics.R")
 
 ui <- dashboardPage(
   
@@ -61,30 +64,24 @@ ui <- dashboardPage(
             dateRangeInput("dates", 
                            "Date range",
                            start = "2019-01-01", 
-                           end = "2019-01-29")
+                           end = "2019-01-29"),
+            # moving average shift input
+            numericInput("days", "MA Shift", 5, min = 0, max = 50),
+            # sma switch
+            checkboxInput("sma", "SMA", value = F),
+            # equilibrium points switch
+            checkboxInput("equil", "EPoints", value = F)
           )
         )
       ),
       # tab content (2)
       tabItem(tabName = "backtesting"
+        # define layout
       )
     )
   ) 
 
 ) # END PAGE
-
-
-### *** Utility Functions *** ###
-
-discreteDeriv <- function(data, shift) {
-  # calculates derivative of closing prices
-  # applies specifically to moving averages
-  discrete <- rep(NA, shift)
-  for (i in 1:length(data)-1) {
-    discrete <- append(discrete, data[i+1]-data[i])
-  }
-  return(discrete)
-}
 
 ### *** Server Function *** ###
 
@@ -98,12 +95,33 @@ server <- function(input, output) {
                auto.assign = FALSE)
   })
   
+  smaInput <- reactive({
+    addSMA(n = input$days)
+    })
+  
+  equilInput <- reactive({
+    x_vline <- equilPoints(dataInput(), input$days)
+    addTA(x_vline, on = -1, col = "lightblue", border='blue')
+  })
+  
   # plot data
   output$plot <- renderPlot({
     Data <- dataInput()
     
+    # add candlestick chart
     chartSeries(Data, type = "candlesticks", 
                 theme = chartTheme("white"), up.col = "green", dn.col = "red")
+    
+    if (input$sma) {
+      smaInput()
+    }
+    else if (input$equil) {
+      equilInput()
+    }
+    else {
+      return(NULL)
+    }
+    
   }, height = 550)
   
   

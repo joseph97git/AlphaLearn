@@ -85,9 +85,9 @@ equil_signal <- ifelse(equil_dates_2deriv == 1, "buy", "sell")
 
 ```{r}
 # plot equilibrium pts
-chartSeries(x = AAPL, subset = '2018-01-01::2018-10-01', type = "candlesticks", theme = chartTheme("white"), up.col = "green", dn.col = "red") 
-addSMA(n = 10)
 x_vline <- xts(rep(TRUE, length(equil_dates)), equil_dates)
-addTA(x_vline, on = -1, col = "lightblue", border='blue')
+chartSeries(x = AAPL, subset = '2018-01-01::2018-10-01', type = "candlesticks", theme = chartTheme("white"), up.col = "green", dn.col = "red", TA = list("addTA(x_vline, on = -1, col = 'lightblue', border='blue')")) 
+addSMA(n = 10)
+#addTA(x_vline, on = -1, col = "lightblue", border='blue')
 ```
 

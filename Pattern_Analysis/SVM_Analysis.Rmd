@@ -140,7 +140,7 @@ dates_signal_sub <- dates_signal[index(predictors_sub)]
 data_dx_roc <- merge(predictors_sub, dates_signal_sub)
 
 # split into training and test sets
-smp_size <- floor(0.75*(data_dx_roc))
+smp_size <- floor(0.6*(data_dx_roc))
 set.seed(13)
 train_idx <- sample(seq_len(nrow(data_dx_roc)), size = smp_size)
 train <- data_dx_roc[-train_idx,]
@@ -170,7 +170,7 @@ confusionMatrix(pred, test_signal$signal)
 ```
 
 ```{r}
-plot(svm_fit, data=train, formula = AAPLClose ~ DX, fill=TRUE, color.palette = cm.colors)
+plot(svm_fit, data=train, formula = AAPLClose ~ DX, fill=TRUE, svSymbol = 21, dataSymbol = 19, symbolPalette = c("#268417", "red"), col = c("#f9dbca", "#e5f9ca"))
 ```
 
 
