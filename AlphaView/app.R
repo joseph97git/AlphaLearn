@@ -33,8 +33,10 @@ ui <- dashboardPage(
     # menu items
     sidebarMenu(
       # item (1) appearance
-      menuItem("Summary", tabName = "summary", icon = icon("clipboard")),
+      menuItem("Summary", tabName = "summary", icon = icon("poll-h")),
       # item (2) appearance
+      menuItem(" Research", tabName = "research", icon = icon("book")),
+      # item (3) appearance
       menuItem("Backtesting", tabName = "backtesting", icon = icon("code-branch"))
     )
   ),
@@ -76,6 +78,22 @@ ui <- dashboardPage(
         )
       ),
       # tab content (2)
+      tabItem(tabName = "research",
+        # define layout
+        navbarPage("Options",
+          tabPanel("SVM",
+            # add rows, columns
+            fluidRow(
+              column(10, "Training Data",
+                     plotOutput("trainData")),
+              column(10, "SVM Data",
+                     plotOutput("svmData"))
+            )
+                   ),
+          tabPanel("LSTM")
+        )
+      ),
+      # tab content (3)
       tabItem(tabName = "backtesting"
         # define layout
       )
@@ -88,6 +106,8 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
+  ### * Reactive Input Summary * ###
+  
   # symbol, date 
   dataInput <- reactive({
     getSymbols(input$symb, src = "yahoo",
@@ -96,26 +116,31 @@ server <- function(input, output) {
                auto.assign = FALSE)
   })
   
+  # sma
   smaInput <- reactive({
     addSMA(n = input$days)
     })
   
+  # buy, sell dates data
   equilBuyInput <- reactive({
     x_vline <- equilPoints(dataInput(), input$days)
     addTA(x_vline[[1]], on = -1, col = "lightblue", border='darkgreen')
   })
-  
   equilSellInput <- reactive({
     x_vline <- equilPoints(dataInput(), input$days)
     addTA(x_vline[[2]], on = -1, col = "gold", border = "darkred")
   })
   
+  ### * Reactive Input Research * ###
+  
+  ### * Output Summary * ###
+  
   # plot data
   output$plot <- renderPlot({
-    Data <- dataInput()
+    Chart <- dataInput()
     
     # add candlestick chart
-    chartSeries(Data, type = "candlesticks", 
+    chartSeries(Chart, type = "candlesticks", 
                 theme = chartTheme("white"), up.col = "green", dn.col = "red")
     
     # toggle sma, equilPts
@@ -132,9 +157,9 @@ server <- function(input, output) {
       return(NULL)
     }
     
-  }, height = 550)
+  }, height = 700)
   
-  
+  ### * Output Research * ###
 }
 
 shinyApp(ui, server)

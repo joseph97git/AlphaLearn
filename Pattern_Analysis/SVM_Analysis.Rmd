@@ -170,7 +170,7 @@ confusionMatrix(pred, test_signal$signal)
 ```
 
 ```{r}
-plot(svm_fit, data=train, formula = AAPLClose ~ DX, fill=TRUE, svSymbol = 21, dataSymbol = 19, symbolPalette = c("#268417", "red"), col = c("#f9dbca", "#e5f9ca"))
+plot(svm_fit, data=train, formula = AAPLClose ~ DX, fill=TRUE, svSymbol = 21, dataSymbol = 19, symbolPalette = c( "#268417", "red"), col = c("#f9dbca", "#e5f9ca"))
 ```
 
 
