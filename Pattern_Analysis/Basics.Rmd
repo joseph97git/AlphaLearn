@@ -15,12 +15,13 @@ knitr::opts_chunk$set(echo = FALSE)
 # import packages
 library(quantmod)
 library(plyr)
+library(xts)
 ```
 
 ## Data
 
 ```{r}
-getSymbols("AAPL", src = "yahoo", from = as.Date('2018-01-01'), to = as.Date('2018-10-01'))
+getSymbols("AAPL", src = "yahoo", from = as.Date('2018-01-01'), to = as.Date('2018-05-20'))
 ```
 
 ## Indicators 
@@ -79,15 +80,22 @@ equil_dates <- as.Date(row.names(close_aapl)[equil_pts])
 # categorize buy, sell signal at equilibrium dates
 equil_dates_2deriv <- bin_2deriv[equil_pts_deriv_shift]
 equil_signal <- ifelse(equil_dates_2deriv == 1, "buy", "sell")
+
+# create xts objects for buy and sell dates
+buy_sell_dates <- xts(x = equil_dates_2deriv, order.by = as.Date(equil_dates))
+buy_dates <- rownames(data.frame(buy_sell_dates[buy_sell_dates == 1]))
+sell_dates <- rownames(data.frame(buy_sell_dates[buy_sell_dates == 0]))
 ```
 
 ## Plot
 
 ```{r}
 # plot equilibrium pts
-x_vline <- xts(rep(TRUE, length(equil_dates)), equil_dates)
-chartSeries(x = AAPL, subset = '2018-01-01::2018-10-01', type = "candlesticks", theme = chartTheme("white"), up.col = "green", dn.col = "red", TA = list("addTA(x_vline, on = -1, col = 'lightblue', border='blue')")) 
+x_vline_buy <- xts(rep(TRUE, length(as.Date(buy_dates))), as.Date(buy_dates))
+x_vline_sell <- xts(rep(TRUE, length(as.Date(sell_dates))), as.Date(sell_dates))
+chartSeries(x = AAPL, subset = '2018-01-01::2018-05-20', type = "candlesticks", theme = chartTheme("white"), up.col = "green", dn.col = "red") 
 addSMA(n = 10)
-#addTA(x_vline, on = -1, col = "lightblue", border='blue')
+addTA(x_vline_buy, on = -1, col = "lightblue", border='darkgreen')
+addTA(x_vline_sell, on = -1, col = "gold", border='darkred')
 ```
 

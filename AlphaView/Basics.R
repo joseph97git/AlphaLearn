@@ -42,9 +42,19 @@ equilPoints <- function(symb, shift) {
   equil_pts <- c(which(diff(bin_deriv)!=0))
   equil_pts_deriv_shift <- equil_pts + 1
   equil_dates <- as.Date(row.names(close)[equil_pts])
+  
+  # categorize buy, sell signal at equilibrium dates
+  equil_dates_2deriv <- bin_2deriv[equil_pts_deriv_shift]
+  
+  # create xts objects for buy and sell dates
+  buy_sell_dates <- xts(x = equil_dates_2deriv, order.by = as.Date(equil_dates))
+  buy_dates <- rownames(data.frame(buy_sell_dates[buy_sell_dates == 1]))
+  sell_dates <- rownames(data.frame(buy_sell_dates[buy_sell_dates == 0]))
 
   # get vertical lines for equil pts
   x_vline <- xts(rep(TRUE, length(equil_dates)), equil_dates)
+  x_vline_buy <- xts(rep(TRUE, length(as.Date(buy_dates))), as.Date(buy_dates))
+  x_vline_sell <- xts(rep(TRUE, length(as.Date(sell_dates))), as.Date(sell_dates))
 
-  return(x_vline)
+  return(list(x_vline_buy, x_vline_sell))
 }

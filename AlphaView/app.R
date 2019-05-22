@@ -70,7 +70,8 @@ ui <- dashboardPage(
             # sma switch
             checkboxInput("sma", "SMA", value = F),
             # equilibrium points switch
-            checkboxInput("equil", "EPoints", value = F)
+            checkboxInput("equilBuy", "Buy EPts", value = F),
+            checkboxInput("equilSell", "Sell EPtx", value = F)
           )
         )
       ),
@@ -99,9 +100,14 @@ server <- function(input, output) {
     addSMA(n = input$days)
     })
   
-  equilInput <- reactive({
+  equilBuyInput <- reactive({
     x_vline <- equilPoints(dataInput(), input$days)
-    addTA(x_vline, on = -1, col = "lightblue", border='blue')
+    addTA(x_vline[[1]], on = -1, col = "lightblue", border='darkgreen')
+  })
+  
+  equilSellInput <- reactive({
+    x_vline <- equilPoints(dataInput(), input$days)
+    addTA(x_vline[[2]], on = -1, col = "gold", border = "darkred")
   })
   
   # plot data
@@ -112,11 +118,15 @@ server <- function(input, output) {
     chartSeries(Data, type = "candlesticks", 
                 theme = chartTheme("white"), up.col = "green", dn.col = "red")
     
+    # toggle sma, equilPts
     if (input$sma) {
       smaInput()
     }
-    else if (input$equil) {
-      equilInput()
+    else if (input$equilBuy) {
+      equilBuyInput()
+    }
+    else if (input$equilSell) {
+      equilSellInput()
     }
     else {
       return(NULL)
