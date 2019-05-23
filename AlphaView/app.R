@@ -7,10 +7,15 @@
 library(shiny)
 library(shinydashboard)
 library(quantmod)
+library(plyr)
 library(TTR)
+library(e1071)
+library(ggplot2)
+library(caret)
 
 # source functions
 source("Basics.R")
+source("Research.R")
 
 ui <- dashboardPage(
   
@@ -65,10 +70,10 @@ ui <- dashboardPage(
             # date range input
             dateRangeInput("dates", 
                            "Date range",
-                           start = "2019-01-01", 
-                           end = "2019-01-29"),
+                           start = "2012-05-18", 
+                           end = "2019-05-18"),
             # moving average shift input
-            numericInput("days", "MA Shift", 5, min = 0, max = 50),
+            numericInput("days", "MA Shift", 10, min = 0, max = 50),
             # sma switch
             checkboxInput("sma", "SMA", value = F),
             # equilibrium points switch
@@ -81,15 +86,24 @@ ui <- dashboardPage(
       tabItem(tabName = "research",
         # define layout
         navbarPage("Options",
+          # SVM tab
           tabPanel("SVM",
-            # add rows, columns
-            fluidRow(
-              column(10, "Training Data",
-                     plotOutput("trainData")),
-              column(10, "SVM Data",
-                     plotOutput("svmData"))
-            )
-                   ),
+            # define layout
+            sidebarLayout(
+              # plots
+              mainPanel(
+                width = 7,
+                plotOutput("trainData")),
+              # sidebar panel
+              sidebarPanel(
+                # split ratio
+                numericInput("splitsize", "Train Test Split", 0.6, min = 0, max = 1, step = 0.01),
+                # seed number
+                numericInput("seed", "Set Seed", 13, min = 0, max = 1000)
+              )
+            ) # end layout
+          ), # end tabPanel
+          # LSTM tab
           tabPanel("LSTM")
         )
       ),
@@ -121,17 +135,23 @@ server <- function(input, output) {
     addSMA(n = input$days)
     })
   
-  # buy, sell dates data
+  # buy dates data
   equilBuyInput <- reactive({
     x_vline <- equilPoints(dataInput(), input$days)
     addTA(x_vline[[1]], on = -1, col = "lightblue", border='darkgreen')
   })
+  
+  # sell dates data
   equilSellInput <- reactive({
     x_vline <- equilPoints(dataInput(), input$days)
     addTA(x_vline[[2]], on = -1, col = "gold", border = "darkred")
   })
   
   ### * Reactive Input Research * ###
+  indDataInput <- reactive({
+    tmpsize <- input$splitsize
+    tmp <- getIndicators(dataInput(), input$days, input$splitsize, input$seed)
+  })
   
   ### * Output Summary * ###
   
@@ -160,6 +180,16 @@ server <- function(input, output) {
   }, height = 700)
   
   ### * Output Research * ###
+  
+  # plot training data 
+  output$trainData <- renderPlot({
+    indData <- indDataInput()
+    trainData <<- indData[[1]]
+    
+    # add training data plot
+    ggplot(data = trainData, aes(DX, ROC, col = factor(signal))) + geom_point(size = 3) + geom_point(shape = 1, stroke = 1, size = 3.1, col = "black") + scale_color_manual(values = c("red", "green"))
+  })
+  
 }
 
 shinyApp(ui, server)

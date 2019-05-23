@@ -41,19 +41,19 @@ discreteDeriv <- function(data, shift) {
 ```{r}
 # get sma data
 close_aapl <- data.frame(AAPL$AAPL.Close)
-sma_aapl <- SMA(close_aapl, n = 3)
+sma_aapl <- SMA(close_aapl, n = 10)
 sma_raw_aapl <- sma_aapl[complete.cases(sma_aapl),]
 ```
 
 ```{r}
 # calculate derivative of sma, 10 day average
-sma_deriv_aapl <- discreteDeriv(sma_raw_aapl, 3)
+sma_deriv_aapl <- discreteDeriv(sma_raw_aapl, 10)
 sma_deriv_raw_aapl <- sma_deriv_aapl[complete.cases(sma_deriv_aapl)]
 ```
 
 ```{r}
 # calculate 2nd derivate of sma
-sma_2deriv_aapl <- discreteDeriv(sma_deriv_raw_aapl, 4)
+sma_2deriv_aapl <- discreteDeriv(sma_deriv_raw_aapl, 11)
 ```
 
 ```{r}
@@ -140,7 +140,7 @@ dates_signal_sub <- dates_signal[index(predictors_sub)]
 data_dx_roc <- merge(predictors_sub, dates_signal_sub)
 
 # split into training and test sets
-smp_size <- floor(0.6*(data_dx_roc))
+smp_size <- floor(0.6*nrow(data_dx_roc))
 set.seed(13)
 train_idx <- sample(seq_len(nrow(data_dx_roc)), size = smp_size)
 train <- data_dx_roc[-train_idx,]
@@ -151,7 +151,8 @@ colnames(test) <- names
 ```
 
 ```{r}
-ggplot(data=train, aes(DX, AAPLClose, col = signal)) + geom_point()
+train_plot <- ggplot(data=train, aes(DX, AAPLClose, col = factor(signal))) + geom_point(size = 3) + geom_point(shape = 1, stroke = 1, size = 3.1, col = "black") + scale_color_manual(values = c("red", "green"))
+train_plot
 ```
 
 ```{r}
@@ -170,7 +171,7 @@ confusionMatrix(pred, test_signal$signal)
 ```
 
 ```{r}
-plot(svm_fit, data=train, formula = AAPLClose ~ DX, fill=TRUE, svSymbol = 21, dataSymbol = 19, symbolPalette = c( "#268417", "red"), col = c("#f9dbca", "#e5f9ca"))
+plot(svm_fit, data=train, formula = AAPLClose ~ DX, fill=TRUE, svSymbol = 21, dataSymbol = 19, symbolPalette = c("red", "#268417"), col = c("#f9dbca", "#e5f9ca"))
 ```
 
 
