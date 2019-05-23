@@ -25,6 +25,9 @@ getIndicators <- function(symb, shift, splitsize, seed, traintest = TRUE) {
   # get equilibrium data
   equilPoints(symb, shift)
   
+  # convert 2nd derivative to factor
+  equil_dates_2deriv <- factor(equil_dates_2deriv)
+  
   # combine and convert to xts
   dates_signal <- data.frame("signal" = equil_dates_2deriv)
   rownames(dates_signal) <- equil_dates
@@ -44,8 +47,8 @@ getIndicators <- function(symb, shift, splitsize, seed, traintest = TRUE) {
     smp_size <- floor(splitsize*nrow(data_dx_roc))
     set.seed(seed)
     train_idx <- sample(seq_len(nrow(data_dx_roc)), size = smp_size)
-    trainDat <- data_dx_roc[-train_idx,]
-    test <- data_dx_roc[train_idx,]
+    trainDat <- data_dx_roc[train_idx,]
+    test <- data_dx_roc[-train_idx,]
     names <- c("DIp", "DIn", "DX", "ROC", "Momentum", "signal")
     colnames(trainDat) <- names
     colnames(test) <- names

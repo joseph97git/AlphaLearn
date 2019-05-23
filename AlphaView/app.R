@@ -70,10 +70,10 @@ ui <- dashboardPage(
             # date range input
             dateRangeInput("dates", 
                            "Date range",
-                           start = "2012-05-18", 
+                           start = "2018-12-21", 
                            end = "2019-05-18"),
             # moving average shift input
-            numericInput("days", "MA Shift", 10, min = 0, max = 50),
+            numericInput("days", "MA Shift", 3, min = 0, max = 50),
             # sma switch
             checkboxInput("sma", "SMA", value = F),
             # equilibrium points switch
@@ -99,7 +99,11 @@ ui <- dashboardPage(
                 # split ratio
                 numericInput("splitsize", "Train Test Split", 0.6, min = 0, max = 1, step = 0.01),
                 # seed number
-                numericInput("seed", "Set Seed", 13, min = 0, max = 1000)
+                numericInput("seed", "Set Seed", 13, min = 0, max = 1000),
+                # variable options 1
+                selectInput("var1", "Variable 1:", c("ROC" = "ROC", "DX" = "DX", "Momentum" = "Momentum")),
+                # variable options 2
+                selectInput("var2", "Variable 2:", c("DX" = "DX", "ROC" = "ROC", "Momentum" = "Momentum"))
               )
             ) # end layout
           ), # end tabPanel
@@ -186,9 +190,22 @@ server <- function(input, output) {
     indData <- indDataInput()
     trainData <<- indData[[1]]
     
+    # temp data frame for plotting
+    tmpTrainData <<- data.frame(trainData[,toString(input$var1)], 
+                                trainData[,toString(input$var2)], 
+                                "signal" = as.factor(trainData[,"signal"]))
+    
     # add training data plot
-    ggplot(data = trainData, aes(DX, ROC, col = factor(signal))) + geom_point(size = 3) + geom_point(shape = 1, stroke = 1, size = 3.1, col = "black") + scale_color_manual(values = c("red", "green"))
-  })
+    ggplot(data = tmpTrainData, aes_string(x = input$var2, y = input$var1, col = "signal")) + 
+      geom_point(size = 7) + geom_point(shape = 1, stroke = 1, size = 7.1, col = "black") + 
+      ggtitle(paste(input$var1, " ", "vs.", " ", input$var2)) +
+      scale_color_manual('Signal', values = c("red", "green"), labels = c("Sell", "Buy")) +
+      theme(title = element_text(size = 20, face = "bold"),
+            axis.text = element_text(size = 20), 
+            axis.title = element_text(size = 20, face = "bold"), 
+            legend.text = element_text(size = 20),
+            legend.title = element_text(size = 20))
+  }, height = 700)
   
 }
 
