@@ -16,6 +16,7 @@ library(caret)
 # source functions
 source("Basics.R")
 source("Research.R")
+source("SVM.R")
 
 ui <- dashboardPage(
   
@@ -92,8 +93,18 @@ ui <- dashboardPage(
             sidebarLayout(
               # plots
               mainPanel(
-                width = 7,
-                plotOutput("trainData")),
+                # svm plot
+                fluidRow(
+                  div(style = "padding:0px"),
+                  width = 7, 
+                  plotOutput("svmData")
+                ),
+                fluidRow(
+                  div(style = "padding:160px"),
+                  width = 7, 
+                  plotOutput("trainData")
+                )
+              ),
               # sidebar panel
               sidebarPanel(
                 # split ratio
@@ -103,12 +114,20 @@ ui <- dashboardPage(
                 # variable options 1
                 selectInput("var1", "Variable 1:", c("ROC" = "ROC", "DX" = "DX", "Momentum" = "Momentum")),
                 # variable options 2
-                selectInput("var2", "Variable 2:", c("DX" = "DX", "ROC" = "ROC", "Momentum" = "Momentum"))
+                selectInput("var2", "Variable 2:", c("DX" = "DX", "ROC" = "ROC", "Momentum" = "Momentum")),
+                # kernel options
+                selectInput("kern", "Kernel:", c("Linear" = "linear", "Polynomial" = "polynomial", 
+                            "Radial Basis" = "radial", "Sigmoid" = "sigmoid")),
+                # degree
+                numericInput("deg", "Degree:", 1, min = 1, max = 10)
               )
             ) # end layout
+            
+            
           ), # end tabPanel
           # LSTM tab
-          tabPanel("LSTM")
+          tabPanel("LSTM"
+          )
         )
       ),
       # tab content (3)
@@ -120,7 +139,7 @@ ui <- dashboardPage(
 
 ) # END PAGE
 
-### *** Server Function *** ###
+### *** Server Function *** ### ------------------------------------------------------------------------------------%
 
 server <- function(input, output) {
   
@@ -151,16 +170,18 @@ server <- function(input, output) {
     addTA(x_vline[[2]], on = -1, col = "gold", border = "darkred")
   })
   
-  ### * Reactive Input Research * ###
+  ### * Reactive Input Research * ### ------------------------------------------------------------------------------%
+  
   indDataInput <- reactive({
     tmpsize <- input$splitsize
     tmp <- getIndicators(dataInput(), input$days, input$splitsize, input$seed)
   })
   
-  ### * Output Summary * ###
+  ### * Output Summary * ### ---------------------------------------------------------------------------------------%
   
   # plot data
   output$plot <- renderPlot({
+    # get data
     Chart <- dataInput()
     
     # add candlestick chart
@@ -183,15 +204,16 @@ server <- function(input, output) {
     
   }, height = 700)
   
-  ### * Output Research * ###
+  ### * Output Research * ### --------------------------------------------------------------------------------------%
   
   # plot training data 
   output$trainData <- renderPlot({
+    # get data
     indData <- indDataInput()
-    trainData <<- indData[[1]]
+    trainData <- indData[[1]]
     
     # temp data frame for plotting
-    tmpTrainData <<- data.frame(trainData[,toString(input$var1)], 
+    tmpTrainData <- data.frame(trainData[,toString(input$var1)], 
                                 trainData[,toString(input$var2)], 
                                 "signal" = as.factor(trainData[,"signal"]))
     
@@ -205,6 +227,32 @@ server <- function(input, output) {
             axis.title = element_text(size = 20, face = "bold"), 
             legend.text = element_text(size = 20),
             legend.title = element_text(size = 20))
+  }, height = 700)
+  
+  ### * Output SVM * ### -------------------------------------------------------------------------------------------%
+  
+  # plot svm data
+  output$svmData <- renderPlot({
+    # get data
+    indData <- indDataInput()
+    trainData <<- indData[[1]]
+    testData <<- indData[[2]]
+    
+    # temp data frame for plotting
+    tmpTrainData <- data.frame(trainData[,toString(input$var1)], 
+                               trainData[,toString(input$var2)], 
+                               "signal" = as.factor(trainData[,"signal"]))
+    
+    # fit model
+    svm_fit <<- getSVMFit(tmpTrainData, input$var1, input$var2, input$kern, input$deg)
+    
+    # get formula for plot
+    svmPlotFormula <- as.formula(paste(input$var1, "~", input$var2))
+    
+    # plot svm
+    plot(svm_fit, data=tmpTrainData, formula = svmPlotFormula, fill=TRUE, svSymbol = 21, 
+         dataSymbol = 19, symbolPalette = c("red", "#268417"), col = c("#f9dbca", "#e5f9ca"))
+    
   }, height = 700)
   
 }

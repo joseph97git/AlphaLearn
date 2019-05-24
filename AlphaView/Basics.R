@@ -44,7 +44,7 @@ equilPoints <- function(symb, shift) {
   equil_dates <<- as.Date(row.names(close)[equil_pts])
   
   # categorize buy, sell signal at equilibrium dates
-  equil_dates_2deriv <- bin_2deriv[equil_pts_deriv_shift]
+  equil_dates_2deriv <<- bin_2deriv[equil_pts_deriv_shift]
   
   # create xts objects for buy and sell dates
   buy_sell_dates <- xts(x = equil_dates_2deriv, order.by = as.Date(equil_dates))
