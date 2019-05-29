@@ -250,9 +250,9 @@ server <- function(input, output) {
     svmPlotFormula <- as.formula(paste(input$var1, "~", input$var2))
     
     # plot svm
-    plot(svm_fit, data=tmpTrainData, formula = svmPlotFormula, fill=TRUE, svSymbol = 21, 
-         dataSymbol = 19, symbolPalette = c("red", "#268417"), col = c("#f9dbca", "#e5f9ca"))
-    
+    plot(svm_fit, data = tmpTrainData, formula = svmPlotFormula, fill=TRUE, svSymbol = 21, 
+         dataSymbol = 19, symbolPalette = c("red", "#268417"), col = c("#f9dbca", "#e5f9ca"), grid = 200)
+
   }, height = 700)
   
 }
