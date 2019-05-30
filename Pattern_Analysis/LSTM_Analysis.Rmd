@@ -164,26 +164,40 @@ for(i in 1:L){
 ```{r}
 # plotting lib
 library(tidyquant)
+library(scales)
+library(lubridate)
 ```
 
 ```{r}
-close_dates <- as.Date(rownames(data.frame(AAPL$AAPL.Close)))
+close_dates <- rownames(data.frame(AAPL$AAPL.Close))
+#close_dates <- as.Date(dates$Ymd, format = "%Y-%m-%d")
 train_idx <- 1:as.numeric(length(close_dates) - nrow(test))
 train_data <- data.frame(cbind(close_dates[train_idx], close_prices[train_idx]))
 test_data <- data.frame(cbind(close_dates[-train_idx], close_prices[-train_idx]))
 predict_data <- data.frame(cbind(close_dates[-train_idx], predictions))
-names <- c("Date", "Price")
+names <- c("date", "close")
 
 colnames(train_data) <- names
 colnames(test_data) <- names
 colnames(predict_data) <- names
+
+train_data$date <- as.Date(train_data$date, format = "%Y-%m-%d")
+test_data$date <- as.Date(test_data$date, "%Y-%m-%d")
+predict_data$date <- as.Date(predict_data$date, "%Y-%m-%d")
+
+train_data$close <- as.numeric(matrix(train_data$close))
+test_data$close <- as.numeric(matrix(test_data$close))
+predict_data$close <- as.numeric(matrix(predict_data$close))
+
 ```
 
 ```{r}
 ggplot() + 
-  geom_line(data = train_data, aes(x = Date, y = Price), color = "blue") + 
-  geom_line(data = test_data, aes(x = Date, y = Price), color = "red") + 
-  geom_line(data = predict_data, aes(x = Date, y = Price), color = "green") + 
-  theme_tq()
+  geom_line(data = train_data, aes(x = date, y = close), color = "blue") +
+  geom_line(data = test_data, aes(x = date, y = close), color = "red") + 
+  geom_line(data = predict_data, aes(x = date, y = close), size = 1, color = "green", linetype = "longdash") + 
+  scale_color_manual(values = c("train", "test", "predict")) + 
+  labs(title = "AAPL", y = "Closing Price", x = "") + 
+  theme_tq() 
 ```
 
