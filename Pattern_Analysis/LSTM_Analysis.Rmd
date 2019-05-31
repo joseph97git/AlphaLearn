@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+EXAMPLE: http://rwanjohi.rbind.io/2018/04/05/time-series-forecasting-using-lstm-in-r/ 
+
 ```{r}
 # load libraries
 library(keras)
@@ -199,5 +201,82 @@ ggplot() +
   scale_color_manual(values = c("train", "test", "predict")) + 
   labs(title = "AAPL", y = "Closing Price", x = "") + 
   theme_tq() 
+```
+
+LSTM from Scratch:
+
+```{r}
+# load libraries
+library(keras)
+library(tensorflow)
+library(quantmod)
+library(plyr)
+library(xts)
+```
+
+```{r}
+# create test sequence
+testSeq <- 1:10
+testSeq
+```
+
+Write a function that maps past input to future output i.e. (input: 1 2 3, output: 4) based on the input size
+
+```{r}
+split_sequence <- function(sequence, n_steps) {
+  # maps past input to future output based
+  # on the input size defined by n_steps
+  
+  iter <- length(sequence) - n_steps
+  
+  return(t(sapply(1:iter, function(i) sequence[i:(i + n_steps)])))
+}
+
+# split the test sequence
+n_steps <- 3
+
+splitSeq <- split_sequence(testSeq, n_steps)
+
+numrow <- nrow(splitSeq)
+
+ttsplit <- numrow - floor(numrow * 0.2)
+
+# split into train and test 
+train <- splitSeq[1:ttsplit,]
+test <- t(matrix(splitSeq[-(1:ttsplit),]))
+
+x_train <- train[,1:n_steps]
+y_train <- matrix(train[,-(1:n_steps)])
+
+x_test <- test[,1:n_steps]
+y_test <- test[,-(1:n_steps)]
+```
+
+Building a Vanilla LSTM Model for univariate forecasting
+
+```{r}
+# reshape into 3D
+n_features <- 1
+dimTrain1 <- dim(train)[1]
+dimTrain2 <- dim(train)[2]
+dim(train) <- c(dimTrain1, dimTrain2, n_features)
+
+# define model
+batch_size <- 1
+units <- 1
+
+model <- keras_model_sequential() 
+model%>%
+  layer_lstm(units, batch_input_shape = c(batch_size, dimTrain1, dimTrain2), stateful= TRUE)%>%
+  layer_dense(units = 1)
+```
+
+```{r}
+# fit model
+Epochs = 50   
+for(i in 1:Epochs ){
+  model %>% fit(x_train, y_train, epochs=1, batch_size=batch_size, verbose=1, shuffle=FALSE)
+  model %>% reset_states()
+}
 ```
 
