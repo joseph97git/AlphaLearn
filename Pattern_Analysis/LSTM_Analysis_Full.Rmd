@@ -66,69 +66,74 @@ scaled_close <- range01(close_price)
 splitSeq <- split_sequence(scaled_close, n_steps)
 rollSeq <- roll_sequence(splitSeq, n_steps)
 
-# get training data
-subSplitSeq <- splitSeq[1:n_steps,]
-x_train <- subSplitSeq[,1:n_steps]
-y_train <- matrix(subSplitSeq[,-(1:n_steps)])
+n_roll <- floor(nrow(splitSeq)/n_steps) - n_steps
+```
 
+```{r}
+# initialize prediction vector
+predictedVals <- numeric()
 
-# get testing data
-x_test <- rollSeq[(n_steps + 1):(2*n_steps),]
+for (i in 1:n_roll) {
+  shift <- n_steps * (i - 1)
   
-# reshape into 3D
-dim(x_train) <- c(dim(x_train)[1], dim(x_train)[2], 1)
-dimXTrain2 <- dim(x_train)[2]
-dimXTrain3 <- dim(x_train)[3]
-```
-
-```{r}
-## building model
-
-# params
-units <- 1
-batch_size <- 1
-
-# define model
-model <- keras_model_sequential()
-model%>%
-  layer_lstm(units = 1, 
-             batch_input_shape = c(batch_size, 
-                                   dimXTrain2, 
-                                   dimXTrain3), 
-             stateful= TRUE)%>%
-  layer_dense(units = 1)
-
-# compile model
-model %>% compile(
-  loss = 'mean_absolute_error',
-  optimizer = optimizer_adam( lr= 0.02, decay = 1e-6 ),  
-  metrics = c('accuracy')
-)
-
-# fit model
-Epochs = 150   
-for(i in 1:Epochs ){
-  model %>% fit(x_train, y_train, epochs=1, batch_size=batch_size, verbose=0, shuffle=FALSE)
-  model %>% reset_states()
+  # get training data
+  subSplitSeq <- splitSeq[(1 + shift):(n_steps + shift),]
+  x_train <- subSplitSeq[,1:n_steps]
+  y_train <- matrix(subSplitSeq[,-(1:n_steps)])
+  
+  # get testing data
+  x_test <- rollSeq[(n_steps + 1 + shift):(2*n_steps + shift),]
+    
+  # reshape into 3D
+  dim(x_train) <- c(dim(x_train)[1], dim(x_train)[2], 1)
+  dimXTrain2 <- dim(x_train)[2]
+  dimXTrain3 <- dim(x_train)[3]
+  
+  ## building model
+  
+  # params
+  units <- 1
+  batch_size <- 1
+  
+  # define model
+  model <- keras_model_sequential()
+  model%>%
+    layer_lstm(units = 1, 
+               batch_input_shape = c(batch_size, 
+                                     dimXTrain2, 
+                                     dimXTrain3), 
+               stateful= TRUE)%>%
+    layer_dense(units = 1)
+  
+  # compile model
+  model %>% compile(
+    loss = 'mean_absolute_error',
+    optimizer = optimizer_adam( lr= 0.02, decay = 1e-6 ),  
+    metrics = c('accuracy')
+  )
+  
+  # fit model
+  Epochs = 150   
+  for(i in 1:Epochs ){
+    model %>% fit(x_train, y_train, epochs=1, batch_size=batch_size, verbose=0, shuffle=FALSE)
+    model %>% reset_states()
+  }
+  
+  # make predictions
+  L = nrow(x_test)
+  predictions = numeric(L)
+  
+  for (i in 1:L) {
+    X = t(matrix(x_test[i,1:n_steps]))
+    dim(X) = c(1,n_steps,1)
+    yhat = model %>% predict(X, batch_size=batch_size)
+    # store
+    predictions[i] <- yhat
+  }
+  
+  predictedVals <- c(predictedVals, predictions)
+  print(predictedVals)
 }
 ```
 
-```{r}
-# make predictions
-L = nrow(x_test)
-predictions = numeric(L)
-
-for (i in 1:L) {
-  X = t(matrix(x_test[i,1:n_steps]))
-  dim(X) = c(1,n_steps,1)
-  yhat = model %>% predict(X, batch_size=batch_size)
-  # store
-  predictions[i] <- yhat
-}
-```
-
-```{r}
-# plot actual vs. predicitons
-
-```
 
