@@ -136,4 +136,22 @@ for (i in 1:n_roll) {
 }
 ```
 
+```{r}
+# get data
+library(readr)
+lstm_aapl <- read_csv("~/Desktop/AlphaLearn/Data/lstm_aapl.csv")
+```
+
+```{r}
+df_lstmPlot <- data.frame("scaledClose" = scaled_close, "pred" = predictedVals, "iter" = 1:203)
+```
+
+```{r}
+ggplot() + 
+  geom_line(data = df_lstmPlot, aes(x = iter, y = scaledClose), color = "blue") +
+  geom_line(data = df_lstmPlot, aes(x = iter, y = pred), color = "red") + 
+  scale_color_manual(values = c("train", "predict")) + 
+  labs(title = "AAPL", y = "Closing Price", x = "") + 
+  theme_tq() 
+```
 

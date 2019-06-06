@@ -1,0 +1,103 @@
+---
+title: "LSTM Analysis Scaled Rolling"
+author: "Joseph Kim"
+date: "6/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## Setup
+
+# load libraries
+library(keras)
+library(tensorflow)
+library(quantmod)
+library(plyr)
+library(xts)
+
+# get close price
+getSymbols("AAPL", src = "yahoo", from = as.Date('2018-01-01'), to = as.Date('2018-10-20'))
+close_prices <- c(matrix(AAPL$AAPL.Close))
+```
+
+```{r}
+## Functions
+
+splitSeq <- function(sequence, n_steps) {
+  # maps past input to future output based
+  # on the input size defined by n_steps
+  
+  iter <- length(sequence) - n_steps
+  
+  return(t(sapply(1:iter, function(i) sequence[i:(i + n_steps)])))
+}
+
+rollSeq <- function(sequence, n_steps) {
+  # shifts sequence down by n_steps
+  # fills missing data with NA
+  
+  matrixNA <- matrix(data = NA, nrow = n_steps, ncol = ncol(sequence))
+  shiftSequence <- sequence[(n_steps):nrow(sequence),]
+  padSeq <- rbind(matrixNA, shiftSequence)
+  return(padSeq)
+}
+
+normFirst <- function(s) {
+  # normalizes sequence around initial value
+  
+  return((s / s[1]) - 1)
+}
+
+denormFirst <- function(n, p0) {
+  # denormalizes around initial value
+  
+  return(p0 * (n + 1))
+}
+
+normWindow <- function(s, winSize) {
+  # normalizes sequence around intial 
+  # value for each window
+  
+  numIter <- length(s) / winSize  # determine num windows 
+  lastIter <- length(s) %% winSize # determine remainder last window
+  normPrices <- numeric()  # store normalized prices
+  
+  # define indexes
+  start <- 1 
+  end <- winSize
+  
+  # loop through prices and shift by windows
+  for (i in (1:numIter)) {
+    # normalize around first number
+    subSeq <- s[start:end]
+    normSeq <- normFirst(subSeq)
+    
+    # add to normalized vector
+    normPrices[start:end] <- normSeq
+    
+    # update indexes
+    start <- start + winSize
+    end <- end + winSize
+  }
+  
+  # add last window
+  if (lastIter > 0) {
+    start <- (length(s) - (lastIter - 1))
+    end <- length(s)
+    subSeq <- s[start:end]
+    normSeq <- normFirst(subSeq)
+    normPrices[start:end] <- normSeq
+  }
+  
+  return(normPrices)
+}
+```
+
+```{r}
+
+```
+
