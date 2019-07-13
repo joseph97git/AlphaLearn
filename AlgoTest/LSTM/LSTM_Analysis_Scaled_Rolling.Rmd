@@ -1,0 +1,214 @@
+---
+title: "LSTM Analysis Scaled Rolling"
+author: "Joseph Kim"
+date: "6/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## Setup
+
+# load libraries
+library(keras)
+library(tensorflow)
+library(quantmod)
+library(plyr)
+library(xts)
+
+# get close price and volume
+getSymbols("AAPL", src = "yahoo", from = as.Date('2018-01-01'), to = as.Date('2018-10-20'))
+closePrices <- c(matrix(AAPL$AAPL.Close))
+volume <- c(matrix(AAPL$AAPL.Volume))
+```
+
+```{r}
+## Functions
+
+splitSeq <- function(sequence, n_steps) {
+  # maps past input to future output based
+  # on the input size defined by n_steps
+  
+  iter <- length(sequence) - n_steps
+  
+  return(t(sapply(1:iter, function(i) sequence[i:(i + n_steps)])))
+}
+
+rollSeq <- function(sequence, n_steps) {
+  # shifts sequence down by n_steps
+  # fills missing data with NA
+  
+  matrixNA <- matrix(data = NA, nrow = n_steps, ncol = ncol(sequence))
+  shiftSequence <- sequence[(n_steps):nrow(sequence),]
+  padSeq <- rbind(matrixNA, shiftSequence)
+  return(padSeq)
+}
+
+normFirst <- function(s) {
+  # normalizes sequence around initial value
+  
+  return((s / s[1]) - 1)
+}
+
+denormFirst <- function(n, p0) {
+  # denormalizes around initial value
+  
+  return(p0 * (n + 1))
+}
+
+normWindow <- function(s, winSize) {
+  # normalizes sequence around intial 
+  # value for each window
+  
+  numIter <- length(s) / winSize  # determine num windows 
+  lastIter <- length(s) %% winSize # determine remainder last window
+  
+  normPrices <- numeric()  # store normalized
+  firstPrices <- numeric() # store first vals for denormalization
+  
+  # define indexes
+  start <- 1 
+  end <- winSize
+  
+  # loop through vals and shift by windows
+  for (i in (1:numIter)) {
+    # normalize around first number
+    subSeq <- s[start:end]
+    normSeq <- normFirst(subSeq)
+    
+    normPrices[start:end] <- normSeq   # add to normalized vector
+    firstPrices[start:end] <- c(subSeq[1],  # add to first value vector 
+                                rep(NA, length(subSeq) - 1))  
+    
+    # update indexes
+    start <- start + winSize
+    end <- end + winSize
+  }
+  
+  # add last window
+  if (lastIter > 0) {
+    start <- (length(s) - (lastIter - 1))
+    end <- length(s)
+    subSeq <- s[start:end]
+    normSeq <- normFirst(subSeq)
+    normPrices[start:end] <- normSeq
+    firstPrices[start:end] <- c(subSeq[1], rep(NA, length(subSeq) - 1))
+  }
+  
+  # convert vectors to dataframe
+  scaledPrices <- data.frame(cbind(matrix(normPrices), matrix(firstPrices)))
+  colnames(scaledPrices) <- c("Norm", "First")
+  
+  return(scaledPrices)
+}
+
+getWinData <- function(df, winSize, winNum) {
+  # gets the window from the dataframe
+  # given the window number
+  
+  if (winNum > round(nrow(df) / winSize)) {  
+    # invalid winNum
+    print("Window is out of bounds!")
+  }
+  else if (winNum == floor((nrow(df) / winSize) + 1)) {
+    # last window
+    lastIter <- nrow(df) %% winSize
+    start <- (nrow(df) - (lastIter - 1))
+    end <- nrow(df)
+    newDf <- as.matrix(sapply(normData[start:end,], as.numeric))
+    colnames(newDf) <- NULL
+    return(newDf)
+  }
+  else {
+    # all other windows
+    shift <- winSize * (winNum - 1)
+    start <- 1 + shift
+    end <- winSize + shift
+    newDf <- as.matrix(sapply(normData[start:end,], as.numeric))
+    colnames(newDf) <- NULL
+    return(newDf)
+  }
+}
+```
+
+```{r}
+## Implementation
+
+# data preprocessing
+winSize <- 5                                         # define window
+normClosePrices <- normWindow(closePrices, winSize)  # normalize close 
+normVolume <- normWindow(volume, winSize)            # normalize volume
+normData <- data.frame("Close" = normClosePrices$Norm, "Volume" = normVolume$Norm)
+
+# get data window
+winNum <- 1
+winData <- t(getWinData(normData, winSize, winNum))
+
+predPrice <- numeric()  # store predicted prices
+
+train <- winData[,1:winSize]
+
+# split train data into input and output
+for (j in 1:(winSize - 1)) {
+  i <- 1
+  # get training data
+  subTrain <- as.matrix(train[,j:(j + 1)])
+  xTrain <- as.matrix(subTrain[,1])
+  yTrain <- as.matrix(subTrain[,2])
+  
+  # reshape into 3D
+  dim(xTrain) <- c(dim(xTrain)[1], dim(xTrain)[2], 1)
+  dimXTrain2 <- dim(xTrain)[2]
+  dimXTrain3 <- dim(xTrain)[3]
+
+  # params
+  units <- 1
+  batch_size <- 1
+    
+  # define model
+  model <- keras_model_sequential()
+  model%>%
+    layer_lstm(units = 1, 
+               batch_input_shape = c(batch_size, 
+                                     dimXTrain2, 
+                                     dimXTrain3), 
+               stateful= TRUE)%>%
+    layer_dropout(rate = 0.2)%>%
+    layer_dense(units = 1)
+  
+  # compile model
+  model %>% compile(
+    loss = 'mean_squared_error',
+    optimizer = optimizer_adam( lr= 0.02, decay = 1e-6 )
+  )
+  
+  # fit model
+  Epochs = 10   
+  for(i in 1:Epochs ){
+    model %>% fit(xTrain, yTrain, epochs=1, batch_size=batch_size, verbose=0, shuffle=FALSE)
+    model %>% reset_states()
+  }
+  
+  # predict on next point
+  test <- yTrain
+  dimTest1 <- dim(test)[1]
+  dimTest2 <- dim(test)[2]
+  dim(test) <- c(dimTest1, dimTest2, 1)  # reshape into 3D
+  yhat <- model %>% predict(test, batch_size=batch_size)  # get predictions
+  
+  # get normalized predictions
+  normPredPrice <- yhat[1, 1] 
+
+  # recover denormalized vals
+  initIndex <- (1 + winSize * (winNum - 1))
+  p0Close <- normClosePrices$First[initIndex] 
+  denormPredPrice <- denormFirst(normPredPrice, p0Close)
+
+  # store recovered vals
+  predPrice[j] <- denormPredPrice
+}
+```
+

@@ -1,0 +1,112 @@
+---
+title: "Risk Manager"
+author: "Joseph Kim"
+date: "6/13/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# import packages
+library(quantmod)
+library(plyr)
+library(xts)
+```
+
+```{r}
+## import data
+getSymbols("AMD", src = "yahoo", from = as.Date('2017-01-01'), to = as.Date('2018-05-20'))
+```
+
+```{r}
+## calculate indicators, shifts = 1, 5, 20, 50, 150
+
+# Signal to Noise Ratio (SNR) # ======================================================= 
+
+# Background: An SNR value of five indicates that the market has moved five times 
+# the volatility (average true range) over the given look-back period.
+
+HLC <- merge.xts(AMD$AMD.High, AMD$AMD.Low, AMD$AMD.Close)
+colnames(HLC) <- c("High", "Low", "Close")
+
+SNR <- SNR(HLC, 1)
+SNR5 <- SNR(HLC, 5)
+SNR20 <- SNR(HLC, 20)
+SNR50 <- SNR(HLC, 50)
+SNR150 <- SNR(HLC, 150)
+
+# Chande Momentum Oscillator (CMO) # ==================================================
+
+# There are several ways to interpret the CMO:
+# 1) Values over/under +/- 50 indicate overbought/oversold conditions.
+# 2) High CMO values indicate strong trends.
+# 3) When the CMO crosses above/below a moving average of the CMO, it is a buy/sell signal.
+
+Close <- AMD$AMD.Close
+
+CMO_Cl <- CMO(Close, 1)
+CMO5_Cl <- CMO(Close, 5)
+CMO20_Cl <- CMO(Close, 20)
+CMO50_Cl <- CMO(Close, 50)
+CMO150_Cl <- CMO(Close, 150)
+
+Volume <- AMD$AMD.Volume
+
+CMO_Vol <- CMO(Volume, 1)
+CMO5_Vol <- CMO(Volume, 5)
+CMO20_Vol <- CMO(Volume, 20)
+CMO50_Vol <- CMO(Volume, 50)
+CMO150_Vol <- CMO(Volume, 150)
+
+# Trend Detection Index (TDI) # ======================================================
+
+TDI <- TDI(Close, n = 1, multiple = 2)
+TDI5 <- TDI(Close, n = 5, multiple = 2)
+TDI20 <- TDI(Close, n = 20, multiple = 2)
+TDI50 <- TDI(Close, n = 50, multiple = 2)
+TDI150 <- TDI(Close, n = 150, multiple = 2)
+
+# Vertical Horizontal Filter # =======================================================
+
+# Background: The direction indicator is the sum of the n-day momentum over the last n days.
+
+VHF <- VHF(HLC, 1)
+VHF5 <- VHF(HLC, 5)
+VHF10 <- VHF(HLC, 10)
+VHF15 <- VHF(HLC, 15)
+VHF20 <- VHF(HLC, 20)
+
+# Percent Rank Over a Moving Window # ================================================
+
+# This function computes a running/rolling percentage rank.
+
+PR <- runPercentRank(Close, n = 1, cumulative = FALSE, exact.multiplier = 0.5)
+PR5 <- runPercentRank(Close, n = 5, cumulative = FALSE, exact.multiplier = 0.5)
+PR10 <- runPercentRank(Close, n = 10, cumulative = FALSE, exact.multiplier = 0.5)
+PR15 <- runPercentRank(Close, n = 15, cumulative = FALSE, exact.multiplier = 0.5)
+PR20 <- runPercentRank(Close, n = 20, cumulative = FALSE, exact.multiplier = 0.5)
+
+# Stochastic Momentum Index # ========================================================
+
+# The stochastic oscillator is a momentum indicator that relates 
+# the location of each day's close relative to the high/low range over the past n periods.
+
+SMI <- stoch(HLC, nFastK = 1, nFastD = 3, nSlowD = 3, bounded = TRUE,
+  smooth = 1)
+SMI5 <- stoch(HLC, nFastK = 5, nFastD = 3, nSlowD = 3, bounded = TRUE,
+  smooth = 1)
+SMI10 <- stoch(HLC, nFastK = 10, nFastD = 3, nSlowD = 3, bounded = TRUE,
+  smooth = 1)
+SMI15 <- stoch(HLC, nFastK = 15, nFastD = 3, nSlowD = 3, bounded = TRUE,
+  smooth = 1)
+SMI20 <- stoch(HLC, nFastK = 20, nFastD = 3, nSlowD = 3, bounded = TRUE,
+  smooth = 1)
+
+# MACD Oscillator # =================================================================
+
+MACD <- MACD(Close, nFast = 12, nSlow = 26, nSig = 9, percent = TRUE)
+```
+
