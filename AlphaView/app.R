@@ -39,11 +39,7 @@ ui <- dashboardPage(
     # menu items
     sidebarMenu(
       # item (1) appearance
-      menuItem("Summary", tabName = "summary", icon = icon("poll-h")),
-      # item (2) appearance
-      menuItem(" Research", tabName = "research", icon = icon("book")),
-      # item (3) appearance
-      menuItem("Backtesting", tabName = "backtesting", icon = icon("code-branch"))
+      menuItem("Research", tabName = "research", icon = icon("book"))
     )
   ),
   
@@ -52,7 +48,7 @@ ui <- dashboardPage(
     # tabs 
     tabItems(
       # tab content (1)
-      tabItem(tabName = "summary",
+      tabItem(tabName = "research",
         # define layout      
         sidebarLayout(
           # plot
@@ -82,57 +78,6 @@ ui <- dashboardPage(
             checkboxInput("equilSell", "Sell EPtx", value = F)
           )
         )
-      ),
-      # tab content (2)
-      tabItem(tabName = "research",
-        # define layout
-        navbarPage("Options",
-          # SVM tab
-          tabPanel("SVM",
-            # define layout
-            sidebarLayout(
-              # plots
-              mainPanel(
-                # svm plot
-                fluidRow(
-                  div(style = "padding:0px"),
-                  width = 7, 
-                  plotOutput("svmData")
-                ),
-                fluidRow(
-                  div(style = "padding:160px"),
-                  width = 7, 
-                  plotOutput("trainData")
-                )
-              ),
-              # sidebar panel
-              sidebarPanel(
-                # split ratio
-                numericInput("splitsize", "Train Test Split", 0.6, min = 0, max = 1, step = 0.01),
-                # seed number
-                numericInput("seed", "Set Seed", 13, min = 0, max = 1000),
-                # variable options 1
-                selectInput("var1", "Variable 1:", c("ROC" = "ROC", "DX" = "DX", "Momentum" = "Momentum")),
-                # variable options 2
-                selectInput("var2", "Variable 2:", c("DX" = "DX", "ROC" = "ROC", "Momentum" = "Momentum")),
-                # kernel options
-                selectInput("kern", "Kernel:", c("Linear" = "linear", "Polynomial" = "polynomial", 
-                            "Radial Basis" = "radial", "Sigmoid" = "sigmoid")),
-                # degree
-                numericInput("deg", "Degree:", 1, min = 1, max = 10)
-              )
-            ) # end layout
-            
-            
-          ), # end tabPanel
-          # LSTM tab
-          tabPanel("LSTM"
-          )
-        )
-      ),
-      # tab content (3)
-      tabItem(tabName = "backtesting"
-        # define layout
       )
     )
   ) 
